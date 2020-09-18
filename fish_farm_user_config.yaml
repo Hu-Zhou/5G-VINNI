@@ -1,0 +1,229 @@
+version: 1.9.0
+name: Edge-Fish-Farms
+​
+### Cloud description
+description: Edge-Fish-Farms
+​
+time:
+    ntp_servers: [ masked-x, masked-y ]
+    zone: Europe/Oslo
+​
+users:
+    admin_user_name: cloudadmin
+    admin_user_password: "masked hash"
+    initial_user_name: um_admin
+    initial_user_password: Cl0ud-admin
+​
+networking:
+    dns: [ masked-x, masked-y ]
+    mtu: 9000
+​
+    l3_ha:
+        provider_network: l3ha
+        cidr: 192.168.4.64/28
+​
+    infra_external:
+        mtu: 1500
+        network_domains:
+            edge:
+                cidr: 10.11.2.0/28
+                vlan: 101
+                gateway: 10.11.2.1
+                ip_range_start: 10.11.2.4
+                ip_range_end:   10.11.2.14
+​
+    infra_internal:
+        network_domains:
+            edge:
+                cidr: 192.168.2.0/25
+                vlan: 20
+​
+    infra_storage_cluster:
+        network_domains:
+            edge:
+                cidr: 192.168.4.0/26
+                vlan: 21
+​
+    provider_networks:
+        providerInternal:
+            shared: true
+            mtu: 9000
+            vlan_ranges: "1001:1500"
+​
+        providerExternal:
+            mtu: 9000
+            vlan_ranges: "1501:2000"
+​
+        l3ha:
+            mtu: 9000
+            vlan_ranges: "981:1000"
+​
+        floatingip:
+            mtu: 1500
+            vlan_ranges: "110:110"
+​
+openstack:
+    admin_password: "admin_pass"
+    storage_backend: ceph
+    instance_default_backend: rbd
+​
+### FCAP configuration
+fcap:
+  pm_hw_monitoring_interface: ipmi
+  pm_dump_log_level: INFO
+  pm_dump_format: csv
+  pm_dump_interval: 15
+  fm_hw_monitoring_interface: snmpv3
+​
+nbi:
+  nbi_user: nbiuser
+  nbi_password: masked_passwd
+​
+snmp_profiles:
+  snmpv3:
+    snmpv3_security_level: authPriv
+    snmpv3_user: admin
+    snmpv3_authpass: masked.passwd
+    snmpv3_authentication: SHA-512
+    snmpv3_privacy: AES
+    snmpv3_privpass: masked.passwd
+​
+storage:
+    backends:
+      lvm:
+         enabled: False
+      ceph:
+         osd_pool_default_size: 2
+         enabled: true
+​
+### Network profiles
+network_profiles:
+    controller_compute_network:
+        linux_bonding_options: "mode=lacp"
+        ovs_bonding_options:   "mode=lacp"
+​
+        bonding_interfaces:
+        # please put correct NIC names here
+            bond0: [ens1f0, ens1f1]
+            bond1: [ens11f0, ens11f1]
+​
+        interface_net_mapping:
+            bond0: [infra_external, infra_internal ]
+​
+        provider_network_interfaces:
+            bond1:
+                type: ovs-dpdk
+                dpdk_max_rx_queues: 2
+                provider_networks: [providerInternal, providerExternal, l3ha, floatingip]
+​
+    storage_compute_network:
+        linux_bonding_options: "mode=lacp"
+        ovs_bonding_options:   "mode=lacp"
+​
+        bonding_interfaces:
+            bond0: [ens1f0, ens1f1]
+            bond1: [ens11f0, ens11f1]
+​
+        interface_net_mapping:
+        # please put correct NIC names here
+            bond0: [infra_internal, infra_storage_cluster ]
+​
+        provider_network_interfaces:
+            bond1:
+                type: ovs-dpdk
+                dpdk_max_rx_queues: 2
+                provider_networks: [providerInternal, providerExternal ]
+​
+performance_profiles:
+    profile_controller:
+        default_hugepagesz: 1G
+        hugepagesz: 1G
+        hugepages: 128
+        platform_cpus:
+            numa0: 2
+        ovs_dpdk_cpus:
+            numa0: 2
+​
+    profile_storage:
+        default_hugepagesz: 1G
+        hugepagesz: 1G
+        hugepages: 160
+        platform_cpus:
+            numa0: 3
+        ovs_dpdk_cpus:
+            numa0: 2
+​
+storage_profiles:
+    profile_ceph:
+        backend: ceph
+        nr_of_ceph_osd_disks: 2
+​
+hosts:
+    controller-1:
+        service_profiles:     [ controller, compute ]
+        network_profiles:     [ controller_compute_network ]
+        performance_profiles: [ profile_controller ]
+        snmp_profile: snmpv3
+        network_domain: edge
+        hwmgmt:
+            address:  10.11.1.2
+            user:     admin
+            password: masked.passwd
+​
+    controller-2:
+        service_profiles:     [ controller, compute ]
+        network_profiles:     [ controller_compute_network ]
+        performance_profiles: [ profile_controller ]
+        snmp_profile: snmpv3
+        network_domain: edge
+        hwmgmt:
+            address:  10.11.1.3
+            user:     admin
+            password: masked.passwd
+​
+    controller-3:
+        service_profiles:     [ controller, compute ]
+        network_profiles:     [ controller_compute_network ]
+        performance_profiles: [ profile_controller ]
+        snmp_profile: snmpv3
+        network_domain: edge
+        hwmgmt:
+            address:  10.11.1.4
+            user:     admin
+            password: masked.passwd
+​
+    storage-1:
+        service_profiles:     [ storage, compute ]
+        network_profiles:     [ storage_compute_network ]
+        storage_profiles:     [ profile_ceph ]
+        performance_profiles: [ profile_storage ]
+        snmp_profile: snmpv3
+        network_domain: edge
+        hwmgmt:
+            address:  10.11.1.5
+            user:     admin
+            password: masked.passwd
+​
+    storage-2:
+        service_profiles:     [ storage, compute ]
+        network_profiles:     [ storage_compute_network ]
+        storage_profiles:     [ profile_ceph ]
+        performance_profiles: [ profile_storage ]
+        snmp_profile: snmpv3
+        network_domain: edge
+        hwmgmt:
+            address:  10.11.1.6
+            user:     admin
+            password: masked.passwd
+​
+host_os: {}
+​
+### Auxiliary hardware
+auxiliary_hardware:
+    rmc-oe:
+        type: ae-rmc-a
+        snmp_profile: snmpv3
+        hwmgmt:
+            address: 10.11.1.58
+            user: admin
+            password: masked.passwd
